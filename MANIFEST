@@ -1,0 +1,10 @@
+Changes
+Makefile.PL
+MANIFEST
+MANIFEST.SKIP
+README
+lib/IO/CaptureOutput.pm
+t/capture.t
+t/capture_exec.t
+t/pod.t
+META.yml                                 Module meta-data (added by MakeMaker)
