@@ -1,5 +1,10 @@
 Revision history for IO::CaptureOutput
-$Id: Changes,v 1.2 2004/11/21 16:09:29 simonflack Exp $
+$Id: Changes,v 1.3 2004/11/22 19:53:50 simonflack Exp $
 
-v0.1  2004-11-21
+v1.02  2004-11-21
+    - add extra quoting on Win32 platform
+    - Win32 won't unlink a file that is open in write mode, so close it first
+    - minor POD tweaks
+
+v1.0  2004-11-21
     - Initial revision

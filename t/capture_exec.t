@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-#$Id: capture_exec.t,v 1.2 2004/11/21 16:09:29 simonflack Exp $
+#$Id: capture_exec.t,v 1.3 2004/11/22 19:51:09 simonflack Exp $
 use strict;
 use Test::More tests => 5;
 use IO::CaptureOutput 'capture_exec';
@@ -7,7 +7,11 @@ use IO::CaptureOutput 'capture_exec';
 my ($out, $err);
 my @perl_e = ($^X, '-e'); # perl -e
 
-($out, $err) = capture_exec(@perl_e, 'print "Hello World!"; print STDERR "PID=$$"');
+# low-level debugging
+#print capture_exec($^X, '-e', 'print join "|", @ARGV'), "\n";
+#print join '|', IO::CaptureOutput::_shell_quote($^X, '-e', 'print join "|", @ARGV'), "\n";
+
+($out, $err) = capture_exec(@perl_e, q[print 'Hello World!'; print STDERR "PID=$$"]);
 is($out, 'Hello World!', 'capture_exec() caught stdout from external command');
 like($err, qr/^PID=\d+/, 'capture_exec() caught stderr from external command');
 

@@ -1,4 +1,4 @@
-# $Id: CaptureOutput.pm,v 1.1 2004/11/21 16:09:29 simonflack Exp $
+# $Id: CaptureOutput.pm,v 1.2 2004/11/22 19:50:55 simonflack Exp $
 package IO::CaptureOutput;
 use strict;
 use vars qw/$VERSION @ISA @EXPORT_OK %EXPORT_TAGS/;
@@ -6,7 +6,7 @@ use Exporter;
 @ISA = 'Exporter';
 @EXPORT_OK = qw/capture capture_exec qxx/;
 %EXPORT_TAGS = (all => \@EXPORT_OK);
-$VERSION = '1.0'; # sprintf'%d.%02d', q$Revision: 1.1 $ =~ /: (\d+)\.(\d+)/;
+$VERSION = sprintf'%d.%02d', q$Revision: 1.2 $ =~ /: (\d+)\.(\d+)/;
 
 sub capture (&@) {
     my ($code, $output, $error) = @_;
@@ -22,11 +22,26 @@ sub capture (&@) {
 sub capture_exec {
     my @args = @_;
     my ($output, $error);
-    capture sub {system @args}, \$output, \$error;
+    capture sub { system _shell_quote(@args)}, \$output, \$error;
     return wantarray ? ($output, $error) : $output;
 }
 
 *qxx = \&capture_exec;
+
+# extra quoting required on Win32 systems
+*_shell_quote = ($^O =~ /MSWin32/) ? \&_shell_quote_win32 : sub {@_};
+sub _shell_quote_win32 {
+    my @args;
+    for (@_) {
+        if (/[ \"]/) { # TODO: check if ^ requires escaping
+            (my $escaped = $_) =~ s/([\"])/\\$1/g;
+            push @args, '"' . $escaped . '"';
+            next;
+        }
+        push @args, $_
+    }
+    return @args;
+}
 
 # Captures everything printed to a filehandle for the lifetime of the object
 # and then transfers it to a scalar reference
@@ -71,8 +86,10 @@ sub DESTROY {
     my ($capture, $newio, $newio_file) = @{$self}[3..5];
     seek $newio, 0, 0;
     $$capture = do {local $/; <$newio>};
-
+    close $newio;
+    
     # Cleanup
+    return unless -e $newio_file;
     unlink $newio_file or carp "Couldn't remove temp file '$newio_file' - $!";
 }
 
@@ -116,6 +133,13 @@ Captures everything printed to C<STDOUT> and C<STDERR> for the duration of
 C<&subroutine>. C<$output> and C<$error> are optional scalar references that
 will contain C<STDOUT> and C<STDERR> respectively.
 
+Returns the return value(s) of C<&subroutine>. The sub is called in the same
+context as C<capture()> was called e.g.:
+
+    @rv = capture(sub {wantarray}); # returns true
+    $rv = capture(sub {wantarray}); # returns defined, but not true
+    capture(sub {wantarray});       # void, returns undef
+
 C<capture()> is able to trap output from subprocesses and C code, which
 traditional C<tie()> methods are unable to capture.
 
@@ -133,7 +157,7 @@ it returns what was printed to C<STDOUT> and C<STDERR>
     my ($output, $error) = capture_exec('perl', '-e', 'warn "Test"');
 
 C<capture_exec> passes its arguments to C<CORE::system> it can take advantage
-of the shell quoting, which makes it handy and slightly more portable
+of the shell quoting, which makes it a handy and slightly more portable
 alternative to backticks, piped C<open()> and C<IPC::Open3>.
 
 You can check the exit status of the C<system()> call with the C<$?>
@@ -141,7 +165,7 @@ variable. See L<perlvar> for more information.
 
 =item qxx(@args)
 
-An alias for C<capture_exec>.
+This is an alias of C<capture_exec>
 
 =back
 
