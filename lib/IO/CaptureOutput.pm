@@ -1,4 +1,4 @@
-# $Id: CaptureOutput.pm,v 1.2 2004/11/22 19:50:55 simonflack Exp $
+# $Id: CaptureOutput.pm,v 1.3 2005/03/25 12:44:14 simonflack Exp $
 package IO::CaptureOutput;
 use strict;
 use vars qw/$VERSION @ISA @EXPORT_OK %EXPORT_TAGS/;
@@ -6,7 +6,7 @@ use Exporter;
 @ISA = 'Exporter';
 @EXPORT_OK = qw/capture capture_exec qxx/;
 %EXPORT_TAGS = (all => \@EXPORT_OK);
-$VERSION = sprintf'%d.%02d', q$Revision: 1.2 $ =~ /: (\d+)\.(\d+)/;
+$VERSION = sprintf'%d.%02d', q$Revision: 1.3 $ =~ /: (\d+)\.(\d+)/;
 
 sub capture (&@) {
     my ($code, $output, $error) = @_;
@@ -87,7 +87,7 @@ sub DESTROY {
     seek $newio, 0, 0;
     $$capture = do {local $/; <$newio>};
     close $newio;
-    
+
     # Cleanup
     return unless -e $newio_file;
     unlink $newio_file or carp "Couldn't remove temp file '$newio_file' - $!";
@@ -183,7 +183,7 @@ Simon Flack E<lt>simonflk _AT_ cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright 2003 Simon Flack E<lt>simonflk _AT_ cpan.orgE<gt>.
+Copyright 2004, 2005 Simon Flack E<lt>simonflk _AT_ cpan.orgE<gt>.
 All rights reserved
 
 You may distribute under the terms of either the GNU General Public License or
