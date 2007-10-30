@@ -1,13 +1,24 @@
 Revision history for IO::CaptureOutput
-$Id: Changes,v 1.4 2005/03/25 12:44:14 simonflack Exp $
 
-v1.03  2005-03-25
+1.04_01 Mon Oct 29 22:56:45 EDT 2007
+
+    - DAGOLDEN added as maintainer; updated build system and packaging for 
+      ongoing maintenance
+
+    - bugfix: capture.t would fail on Win32 if Inline::C was installed; 
+      fixed the sample C code used in testing to flush stderr (RT#21712)
+
+    - bugfix: was failing on perl 5.8.0 due to extraneous space in call 
+      to open(); removing the space fixed the bug (RT#22044)
+      
+
+1.03  2005-03-25
     - Add t/pod_coverage.t
 
-v1.02  2004-11-22
+1.02  2004-11-22
     - add extra quoting on Win32 platform
     - Win32 won't unlink a file that is open in write mode, so close it first
     - minor POD tweaks
 
-v1.0  2004-11-21
+1.0  2004-11-21
     - Initial revision
