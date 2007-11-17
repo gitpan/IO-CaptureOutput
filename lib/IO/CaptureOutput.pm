@@ -6,7 +6,7 @@ use Exporter;
 @ISA = 'Exporter';
 @EXPORT_OK = qw/capture capture_exec qxx capture_exec_combined qxy/;
 %EXPORT_TAGS = (all => \@EXPORT_OK);
-$VERSION = '1.05';
+$VERSION = '1.05_51';
 
 sub capture (&@) { ## no critic
     my ($code, $output, $error) = @_;
@@ -73,7 +73,7 @@ sub new {
     # Duplicate the filehandle
     my $saved;
     {
-        no strict 'refs'; # for 5.005
+        no strict 'refs'; ## no critic - needed for 5.005
         if ( defined fileno($fh) && ! _is_wperl() ) {
             $saved = gensym;
             open $saved, ">&$fh" or croak "Can't redirect <$fh> - $!";
@@ -93,7 +93,7 @@ sub new {
 
     # Redirect (or merge)
     {
-        no strict 'refs'; # for 5.005
+        no strict 'refs'; ## no critic -- needed for 5.005
         open $fhref, ">&".fileno($newio) or croak "Can't redirect $fh - $!";
     }
 
