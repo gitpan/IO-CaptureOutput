@@ -6,18 +6,25 @@ use Exporter;
 @ISA = 'Exporter';
 @EXPORT_OK = qw/capture capture_exec qxx capture_exec_combined qxy/;
 %EXPORT_TAGS = (all => \@EXPORT_OK);
-$VERSION = '1.0601';
+$VERSION = '1.07_01';
 
 sub capture (&@) { ## no critic
-    my ($code, $output, $error) = @_;
+    my ($code, $output, $error, $output_file, $error_file) = @_;
     for ($output, $error) {
         $_ = \do { my $s; $s = ''} unless ref $_;
-        $$_ = '' unless defined($$_);
+        $$_ = '' if $_ != \undef && !defined($$_);
     }
-    my $capture_out = IO::CaptureOutput::_proxy->new('STDOUT', $output);
-    my $capture_err = IO::CaptureOutput::_proxy->new(
-        'STDERR', $error, $output == $error ? 'STDOUT' : undef
-    );
+    my ($capture_out, $capture_err);
+    if ( $output != \undef ) { 
+        $capture_out = IO::CaptureOutput::_proxy->new(
+            'STDOUT', $output, undef, $output_file
+        );
+    }
+    if ( $error != \undef ) { 
+        my $capture_err = IO::CaptureOutput::_proxy->new(
+            'STDERR', $error, ($output == $error ? 'STDOUT' : undef), $error_file
+        );
+    }
     &$code();
 }
 
@@ -66,7 +73,7 @@ sub _is_wperl { $^O eq 'MSWin32' && basename($^X) eq 'wperl.exe' }
 
 sub new {
     my $class = shift;
-    my ($fh, $capture, $merge_fh) = @_;
+    my ($fh, $capture, $merge_fh, $capture_file) = @_;
     $fh       = qualify($fh);         # e.g. main::STDOUT
     my $fhref = qualify_to_ref($fh);  # e.g. \*STDOUT
 
@@ -84,7 +91,11 @@ sub new {
     my ($newio, $newio_file);
     if ( ! $merge_fh ) {
         $newio = gensym;
-        (undef, $newio_file) = tempfile;
+        if ($capture_file) {
+            $newio_file = $capture_file;
+        } else {
+            (undef, $newio_file) = tempfile;
+        }
         open $newio, "+>$newio_file" or croak "Can't create temp file for $fh - $!";
     }
     else {
@@ -97,7 +108,7 @@ sub new {
         open $fhref, ">&".fileno($newio) or croak "Can't redirect $fh - $!";
     }
 
-    bless [$$, $fh, $saved, $capture, $newio, $newio_file], $class;
+    bless [$$, $fh, $saved, $capture, $newio, $newio_file, $capture_file], $class;
 }
 
 sub DESTROY {
@@ -130,6 +141,7 @@ sub DESTROY {
 
     # Cleanup
     return unless defined $newio_file && -e $newio_file;
+    return if $self->[6]; # the "temp" file was explicitly named
     unlink $newio_file or carp "Couldn't remove temp file '$newio_file' - $!";
 }
 
@@ -177,7 +189,7 @@ The following functions will be exported on demand.
 
 == capture()
 
-    capture(\&subroutine, \$stdout, \$stderr);
+    capture \&subroutine, \$stdout, \$stderr;
 
 Captures everything printed to {STDOUT} and {STDERR} for the duration of
 {&subroutine}. {$stdout} and {$stderr} are optional scalars that will contain
@@ -186,21 +198,48 @@ Captures everything printed to {STDOUT} and {STDERR} for the duration of
 Returns the return value(s) of {&subroutine}. The sub is called in the same
 context as {capture()} was called e.g.:
 
-    @rv = capture(sub {wantarray}); # returns true
-    $rv = capture(sub {wantarray}); # returns defined, but not true
-    capture(sub {wantarray});       # void, returns undef
+    @rv = capture sub {wantarray}; # returns true
+    $rv = capture sub {wantarray}; # returns defined, but not true
+    capture sub {wantarray};       # void, returns undef
 
 {capture()} is able to capture output from subprocesses and C code, which
 traditional {tie()} methods of output capture are unable to do.
+
+*Note:* {capture()} will only capture output that has been written or flushed
+to the filehandle.
 
 If the two scalar references refer to the same scalar, then {STDERR} will be
 merged to {STDOUT} before capturing and the scalar will hold the combined
 output of both.
 
-    capture(\&subroutine, \$combined, \$combined);
+    capture \&subroutine, \$combined, \$combined;
 
-*Note:* {capture()} will only capture output that has been written or flushed
-to the filehandle.
+Normally, {capture()} uses anonymous, temporary files for capturing output.
+If desired, specific file names may be provided instead as additional options.
+
+    capture \&subroutine, \$stdout, \$stderr, $out_file, $err_file;
+
+Files provided will be clobbered, overwriting any previous data, but
+will persist after the call to {capture} for inspection or other manipulation.
+
+By default, when no references are provided to hold STDOUT or STDERR, output
+is captured and silently discarded.
+
+    # Capture STDOUT, discard STDERR
+    capture \&subroutine, \$stdout;
+
+    # Discard STDOUT, capture STDERR
+    capture \&subroutine, undef, \$stderr;
+
+If either STDOUT or STDERR should be passed through to the terminal instead of
+captured, provide a reference to undef -- {\undef} -- instead of a capture
+variable.
+
+    # Capture STDOUT, display STDERR
+    capture \&subroutine, \$stdout, \undef;
+
+    # Display STDOUT, capture STDERR
+    capture \&subroutine, \undef, \$stderr;
 
 == capture_exec()
 
