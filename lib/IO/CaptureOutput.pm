@@ -7,7 +7,7 @@ use Carp qw/croak/;
 @ISA = 'Exporter';
 @EXPORT_OK = qw/capture capture_exec qxx capture_exec_combined qxy/;
 %EXPORT_TAGS = (all => \@EXPORT_OK);
-$VERSION = '1.1001';
+$VERSION = '1.11';
 $VERSION = eval $VERSION; ## no critic
 $CarpLevel = 0; # help capture report errors at the right level
 
@@ -49,7 +49,7 @@ sub _capture (&@) { ## no critic
         );
     }
     if ( !defined $error || $error != \undef ) { 
-        my $capture_err = IO::CaptureOutput::_proxy->new(
+        $capture_err = IO::CaptureOutput::_proxy->new(
             'STDERR', $error, ($should_merge ? 'STDOUT' : undef), $error_file
         );
     }
