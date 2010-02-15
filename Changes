@@ -1,5 +1,9 @@
 Revision history for IO::CaptureOutput
 
+1.1102 Mon Feb 15 07:36:53 EST 2010
+
+    - Fixed test that confused archname and osname (reported by Tux)
+    
 1.1101 Tue Mar  3 23:30:45 EST 2009
 
     - Fixed Makefile.PL; no functional changes
