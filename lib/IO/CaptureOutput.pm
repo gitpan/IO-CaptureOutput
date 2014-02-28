@@ -1,14 +1,16 @@
-# $Id: CaptureOutput.pm,v 1.3 2005/03/25 12:44:14 simonflack Exp $
-package IO::CaptureOutput;
 use strict;
-use vars qw/$VERSION @ISA @EXPORT_OK %EXPORT_TAGS $CarpLevel/;
+use warnings;
+
+package IO::CaptureOutput;
+# ABSTRACT: capture STDOUT and STDERR from Perl code, subprocesses or XS
+our $VERSION = '1.1103'; # VERSION
+
+use vars qw/@ISA @EXPORT_OK %EXPORT_TAGS $CarpLevel/;
 use Exporter;
 use Carp qw/croak/;
 @ISA = 'Exporter';
 @EXPORT_OK = qw/capture capture_exec qxx capture_exec_combined qxy/;
 %EXPORT_TAGS = (all => \@EXPORT_OK);
-$VERSION = '1.1102';
-$VERSION = eval $VERSION; ## no critic
 $CarpLevel = 0; # help capture report errors at the right level
 
 sub _capture (&@) { ## no critic
@@ -132,7 +134,7 @@ sub _validate {
 # Captures everything printed to a filehandle for the lifetime of the object
 # and then transfers it to a scalar reference
 package IO::CaptureOutput::_proxy;
-use File::Temp 'tempfile';
+use File::Temp 0.16 'tempfile';
 use File::Basename qw/basename/;
 use Symbol qw/gensym qualify qualify_to_ref/;
 use Carp;
@@ -220,195 +222,266 @@ __END__
 
 =pod
 
-=begin wikidoc
+=encoding UTF-8
 
-= NAME
+=head1 NAME
 
 IO::CaptureOutput - capture STDOUT and STDERR from Perl code, subprocesses or XS
 
-= VERSION
+=head1 VERSION
+
+version 1.1103
+
+=head1 SYNOPSIS
+
+     use IO::CaptureOutput qw(capture qxx qxy);
+ 
+     # STDOUT and STDERR separately
+     capture { noisy_sub(@args) } \$stdout, \$stderr;
+ 
+     # STDOUT and STDERR together
+     capture { noisy_sub(@args) } \$combined, \$combined;
+ 
+     # STDOUT and STDERR from external command
+     ($stdout, $stderr, $success) = qxx( @cmd );
+ 
+     # STDOUT and STDERR together from external command
+     ($combined, $success) = qxy( @cmd );
+
+=head1 DESCRIPTION
+
+B<This module is no longer recommended by the maintainer> - see
+L<Capture::Tiny> instead.
+
+This module provides routines for capturing STDOUT and STDERR from perl 
+subroutines, forked system calls (e.g. C<<< system() >>>, C<<< fork() >>>) and from 
+XS or C modules.
+
+=head1 NAME
+
+=head1 VERSION
 
 This documentation describes version %%VERSION%%.
 
-= SYNOPSIS
-
-    use IO::CaptureOutput qw(capture qxx qxy);
-
-    # STDOUT and STDERR separately
-    capture { noisy_sub(@args) } \$stdout, \$stderr;
-
-    # STDOUT and STDERR together
-    capture { noisy_sub(@args) } \$combined, \$combined;
-
-    # STDOUT and STDERR from external command
-    ($stdout, $stderr, $success) = qxx( @cmd );
-
-    # STDOUT and STDERR together from external command
-    ($combined, $success) = qxy( @cmd );
-
-= DESCRIPTION
-
-This module provides routines for capturing STDOUT and STDERR from perl 
-subroutines, forked system calls (e.g. {system()}, {fork()}) and from 
-XS or C modules.
-
-= FUNCTIONS
+=head1 FUNCTIONS
 
 The following functions will be exported on demand.
 
-== capture()
+=head2 capture()
 
-    capture \&subroutine, \$stdout, \$stderr;
+     capture \&subroutine, \$stdout, \$stderr;
 
-Captures everything printed to {STDOUT} and {STDERR} for the duration of
-{&subroutine}. {$stdout} and {$stderr} are optional scalars that will contain
-{STDOUT} and {STDERR} respectively. 
+Captures everything printed to C<<< STDOUT >>> and C<<< STDERR >>> for the duration of
+C<<< &subroutine >>>. C<<< $stdout >>> and C<<< $stderr >>> are optional scalars that will contain
+C<<< STDOUT >>> and C<<< STDERR >>> respectively. 
 
-{capture()} uses a code prototype so the first argument can be specified directly within 
+C<<< capture() >>> uses a code prototype so the first argument can be specified directly within 
 brackets if desired.
 
-    # shorthand with prototype
-    capture { print __PACKAGE__ } \$stdout, \$stderr;
+     # shorthand with prototype
+     capture { print __PACKAGE__ } \$stdout, \$stderr;
 
-Returns the return value(s) of {&subroutine}. The sub is called in the same
-context as {capture()} was called e.g.:
+Returns the return value(s) of C<<< &subroutine >>>. The sub is called in the same
+context as C<<< capture() >>> was called e.g.:
 
-    @rv = capture { wantarray } ; # returns true
-    $rv = capture { wantarray } ; # returns defined, but not true
-    capture { wantarray };       # void, returns undef
+     @rv = capture { wantarray } ; # returns true
+     $rv = capture { wantarray } ; # returns defined, but not true
+     capture { wantarray };       # void, returns undef
 
-{capture()} is able to capture output from subprocesses and C code, which
-traditional {tie()} methods of output capture are unable to do.
+C<<< capture() >>> is able to capture output from subprocesses and C code, which
+traditional C<<< tie() >>> methods of output capture are unable to do.
 
-*Note:* {capture()} will only capture output that has been written or flushed
+B<Note:> C<<< capture() >>> will only capture output that has been written or flushed
 to the filehandle.
 
-If the two scalar references refer to the same scalar, then {STDERR} will be
-merged to {STDOUT} before capturing and the scalar will hold the combined
+If the two scalar references refer to the same scalar, then C<<< STDERR >>> will be
+merged to C<<< STDOUT >>> before capturing and the scalar will hold the combined
 output of both.
 
-    capture \&subroutine, \$combined, \$combined;
+     capture \&subroutine, \$combined, \$combined;
 
-Normally, {capture()} uses anonymous, temporary files for capturing output.
+Normally, C<<< capture() >>> uses anonymous, temporary files for capturing output.
 If desired, specific file names may be provided instead as additional options.
 
-    capture \&subroutine, \$stdout, \$stderr, $out_file, $err_file;
+     capture \&subroutine, \$stdout, \$stderr, $out_file, $err_file;
 
 Files provided will be clobbered, overwriting any previous data, but
-will persist after the call to {capture()} for inspection or other manipulation.
+will persist after the call to C<<< capture() >>> for inspection or other manipulation.
 
 By default, when no references are provided to hold STDOUT or STDERR, output
 is captured and silently discarded.
 
-    # Capture STDOUT, discard STDERR
-    capture \&subroutine, \$stdout;
+     # Capture STDOUT, discard STDERR
+     capture \&subroutine, \$stdout;
+ 
+     # Discard STDOUT, capture STDERR
+     capture \&subroutine, undef, \$stderr;
 
-    # Discard STDOUT, capture STDERR
-    capture \&subroutine, undef, \$stderr;
+However, even when using C<<< undef >>>, output can be captured to specific files.
 
-However, even when using {undef}, output can be captured to specific files.
-
-    # Capture STDOUT to a specific file, discard STDERR
-    capture \&subroutine, \$stdout, undef, $outfile;
-
-    # Discard STDOUT, capture STDERR to a specific file
-    capture \&subroutine, undef, \$stderr, undef, $err_file;
-
-    # Discard both, capture merged output to a specific file
-    capture \&subroutine, undef, undef, $mergedfile;
+     # Capture STDOUT to a specific file, discard STDERR
+     capture \&subroutine, \$stdout, undef, $outfile;
+ 
+     # Discard STDOUT, capture STDERR to a specific file
+     capture \&subroutine, undef, \$stderr, undef, $err_file;
+ 
+     # Discard both, capture merged output to a specific file
+     capture \&subroutine, undef, undef, $mergedfile;
 
 It is a fatal error to merge STDOUT and STDERR and request separate, specific
 files for capture.
 
-    # ERROR:
-    capture \&subroutine, \$stdout, \$stdout, $out_file, $err_file;
-    capture \&subroutine, undef, undef, $out_file, $err_file;
+     # ERROR:
+     capture \&subroutine, \$stdout, \$stdout, $out_file, $err_file;
+     capture \&subroutine, undef, undef, $out_file, $err_file;
 
 If either STDOUT or STDERR should be passed through to the terminal instead of
-captured, provide a reference to undef -- {\undef} -- instead of a capture
+captured, provide a reference to undef -- C<<< \undef >>> -- instead of a capture
 variable.
 
-    # Capture STDOUT, display STDERR
-    capture \&subroutine, \$stdout, \undef;
+     # Capture STDOUT, display STDERR
+     capture \&subroutine, \$stdout, \undef;
+ 
+     # Display STDOUT, capture STDERR
+     capture \&subroutine, \undef, \$stderr;
 
-    # Display STDOUT, capture STDERR
-    capture \&subroutine, \undef, \$stderr;
+=head2 capture_exec()
 
-== capture_exec()
+     ($stdout, $stderr, $success, $exit_code) = capture_exec(@args);
 
-    ($stdout, $stderr, $success, $exit_code) = capture_exec(@args);
-
-Captures and returns the output from {system(@args)}. In scalar context,
-{capture_exec()} will return what was printed to {STDOUT}. In list context,
-it returns what was printed to {STDOUT} and {STDERR} as well as a success
+Captures and returns the output from C<<< system(@args) >>>. In scalar context,
+C<<< capture_exec() >>> will return what was printed to C<<< STDOUT >>>. In list context,
+it returns what was printed to C<<< STDOUT >>> and C<<< STDERR >>> as well as a success
 flag and the exit value.
 
-    $stdout = capture_exec('perl', '-e', 'print "hello world"');
+     $stdout = capture_exec('perl', '-e', 'print "hello world"');
+ 
+     ($stdout, $stderr, $success, $exit_code) = 
+         capture_exec('perl', '-e', 'warn "Test"');
 
-    ($stdout, $stderr, $success, $exit_code) = 
-        capture_exec('perl', '-e', 'warn "Test"');
-
-{capture_exec} passes its arguments to {system()} and on MSWin32 will protect
+C<<< capture_exec >>> passes its arguments to C<<< system() >>> and on MSWin32 will protect
 arguments with shell quotes if necessary.  This makes it a handy and slightly
-more portable alternative to backticks, piped {open()} and {IPC::Open3}.
+more portable alternative to backticks, piped C<<< open() >>> and C<<< IPC::Open3 >>>.
 
-The {$success} flag returned will be true if the command ran successfully and
+The C<<< $success >>> flag returned will be true if the command ran successfully and
 false if it did not (if the command could not be run or if it ran and
 returned a non-zero exit value).  On failure, the raw exit value of the
-{system()} call is available both in the {$exit_code} returned and in the {$?}
+C<<< system() >>> call is available both in the C<<< $exit_code >>> returned and in the C<<< $? >>>
 variable.
 
-  ($stdout, $stderr, $success, $exit_code) = 
-      capture_exec('perl', '-e', 'warn "Test" and exit 1');
+   ($stdout, $stderr, $success, $exit_code) = 
+       capture_exec('perl', '-e', 'warn "Test" and exit 1');
+ 
+   if ( ! $success ) {
+       print "The exit code was " . ($exit_code >> 8) . "\n";
+   }
 
-  if ( ! $success ) {
-      print "The exit code was " . ($exit_code >> 8) . "\n";
-  }
-
-See [perlvar] for more information on interpreting a child process
+See L<perlvar> for more information on interpreting a child process
 exit code.
 
-== capture_exec_combined()
+=head2 capture_exec_combined()
 
-    ($combined, $success, $exit_code) = capture_exec_combined(
-        'perl', '-e', 'print "hello\n"', 'warn "Test\n"
-    );
+     ($combined, $success, $exit_code) = capture_exec_combined(
+         'perl', '-e', 'print "hello\n"', 'warn "Test\n"
+     );
 
-This is just like {capture_exec()}, except that it merges {STDERR} with {STDOUT}
+This is just like C<<< capture_exec() >>>, except that it merges C<<< STDERR >>> with C<<< STDOUT >>>
 before capturing output.
 
-*Note:* there is no guarantee that text printed to {STDOUT} and {STDERR} in the
+B<Note:> there is no guarantee that text printed to C<<< STDOUT >>> and C<<< STDERR >>> in the
 subprocess will be appear in order. The actual order will depend on how IO
 buffering is handled in the subprocess.
 
-== qxx()
+=head2 qxx()
 
-This is an alias for {capture_exec()}.
+This is an alias for C<<< capture_exec() >>>.
 
-== qxy()
+=head2 qxy()
 
-This is an alias for {capture_exec_combined()}.
+This is an alias for C<<< capture_exec_combined() >>>.
 
-= SEE ALSO
+=head1 SEE ALSO
 
-* [IPC::Open3]
-* [IO::Capture]
-* [IO::Utils]
-* [IPC::System::Simple]
+=over
 
-= AUTHORS
+=item *
 
-* Simon Flack <simonflk _AT_ cpan.org> (original author)
-* David Golden <dagolden _AT_ cpan.org> (co-maintainer since version 1.04)
+L<Capture::Tiny>
 
-= COPYRIGHT AND LICENSE
+=item *
 
-Portions copyright 2004, 2005 Simon Flack.  Portions copyright 2007, 2008 David
-Golden.  All rights reserved.
+L<IPC::Open3>
 
-You may distribute under the terms of either the GNU General Public License or
-the Artistic License, as specified in the Perl README file.
+=item *
 
-=end wikidoc 
+L<IO::Capture>
+
+=item *
+
+L<IO::Utils>
+
+=item *
+
+L<IPC::System::Simple>
+
+=back
+
+=for :stopwords cpan testmatrix url annocpan anno bugtracker rt cpants kwalitee diff irc mailto metadata placeholders metacpan
+
+=head1 SUPPORT
+
+=head2 Bugs / Feature Requests
+
+Please report any bugs or feature requests through the issue tracker
+at L<https://github.com/dagolden/IO-CaptureOutput/issues>.
+You will be notified automatically of any progress on your issue.
+
+=head2 Source Code
+
+This is open source software.  The code repository is available for
+public review and contribution under the terms of the license.
+
+L<https://github.com/dagolden/IO-CaptureOutput>
+
+  git clone https://github.com/dagolden/IO-CaptureOutput.git
+
+=head1 AUTHORS
+
+=over 4
+
+=item *
+
+Simon Flack <simonflk@cpan.org>
+
+=item *
+
+David Golden <dagolden@cpan.org>
+
+=back
+
+=head1 CONTRIBUTORS
+
+=over 4
+
+=item *
+
+Olivier Mengué <dolmen@cpan.org>
+
+=item *
+
+Tony Cook <tony@develop-help.com>
+
+=item *
+
+unknown <dgolden@.(none)>
+
+=back
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2014 by Simon Flack and David Golden.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
 
 =cut

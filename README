@@ -3,7 +3,7 @@ NAME
     subprocesses or XS
 
 VERSION
-    This documentation describes version 1.1102.
+    version 1.1103
 
 SYNOPSIS
          use IO::CaptureOutput qw(capture qxx qxy);
@@ -21,9 +21,16 @@ SYNOPSIS
          ($combined, $success) = qxy( @cmd );
 
 DESCRIPTION
+    This module is no longer recommended by the maintainer - see
+    Capture::Tiny instead.
+
     This module provides routines for capturing STDOUT and STDERR from perl
     subroutines, forked system calls (e.g. "system()", "fork()") and from XS
     or C modules.
+
+NAME
+VERSION
+    This documentation describes version %%VERSION%%.
 
 FUNCTIONS
     The following functions will be exported on demand.
@@ -161,6 +168,8 @@ FUNCTIONS
     This is an alias for "capture_exec_combined()".
 
 SEE ALSO
+    *   Capture::Tiny
+
     *   IPC::Open3
 
     *   IO::Capture
@@ -169,16 +178,35 @@ SEE ALSO
 
     *   IPC::System::Simple
 
-AUTHORS
-    *   Simon Flack <simonflk _AT_ cpan.org> (original author)
+SUPPORT
+  Bugs / Feature Requests
+    Please report any bugs or feature requests through the issue tracker at
+    <https://github.com/dagolden/IO-CaptureOutput/issues>. You will be
+    notified automatically of any progress on your issue.
 
-    *   David Golden <dagolden _AT_ cpan.org> (co-maintainer since version
-        1.04)
+  Source Code
+    This is open source software. The code repository is available for
+    public review and contribution under the terms of the license.
+
+    <https://github.com/dagolden/IO-CaptureOutput>
+
+      git clone https://github.com/dagolden/IO-CaptureOutput.git
+
+AUTHORS
+    *   Simon Flack <simonflk@cpan.org>
+
+    *   David Golden <dagolden@cpan.org>
+
+CONTRIBUTORS
+    *   Olivier Mengué <dolmen@cpan.org>
+
+    *   Tony Cook <tony@develop-help.com>
+
+    *   unknown <dgolden@.(none)>
 
 COPYRIGHT AND LICENSE
-    Portions copyright 2004, 2005 Simon Flack. Portions copyright 2007, 2008
-    David Golden. All rights reserved.
+    This software is copyright (c) 2014 by Simon Flack and David Golden.
 
-    You may distribute under the terms of either the GNU General Public
-    License or the Artistic License, as specified in the Perl README file.
+    This is free software; you can redistribute it and/or modify it under
+    the same terms as the Perl 5 programming language system itself.
 
